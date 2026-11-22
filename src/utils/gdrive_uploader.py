@@ -5,7 +5,7 @@ Google Drive API(서비스 계정)를 이용해 수집된 CSV 파일을 data/wee
 import json
 import os
 from pathlib import Path
-from google.oauth2 import service_account
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
@@ -13,12 +13,12 @@ SCOPES = ["https://www.googleapis.com/auth/drive.file", "https://www.googleapis.
 
 
 def get_drive_service():
-    """GDRIVE_CREDENTIALS 환경변수로 Google Drive API 클라이언트를 생성한다."""
+    """GDRIVE_CREDENTIALS(OAuth2 JSON)로 Google Drive API 클라이언트를 생성한다."""
     creds_json = os.getenv("GDRIVE_CREDENTIALS")
     if not creds_json:
         raise ValueError("GDRIVE_CREDENTIALS 환경변수가 설정되지 않았습니다.")
     info = json.loads(creds_json)
-    creds = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    creds = Credentials.from_authorized_user_info(info, scopes=SCOPES)
     return build("drive", "v3", credentials=creds)
 
 
