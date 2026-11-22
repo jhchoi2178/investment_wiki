@@ -10,8 +10,10 @@ bonds:
   KR_2Y: { source: ecos, stat_code: "817Y002", item_code: "010195000", name: "한국 국고채 2년물" }
   KR_10Y: { source: ecos, stat_code: "817Y002", item_code: "010210000", name: "한국 국고채 10년물" }
   KR_30Y: { source: ecos, stat_code: "817Y002", item_code: "010230000", name: "한국 국고채 30년물" }
-  # 일본채 (FRED - 10년물 월간/일간, 2Y/30Y는 추후 보완 가능)
-  JP_10Y: { source: fred, id: "IRLTLT01JPM156N", name: "일본채 10년물" }
+  # 일본채 (일본 재무성 MOF 일별 금리)
+  JP_2Y: { source: mof, tenor: "2Y", name: "일본채 2년물" }
+  JP_10Y: { source: mof, tenor: "10Y", name: "일본채 10년물" }
+  JP_30Y: { source: mof, tenor: "30Y", name: "일본채 30년물" }
 
 rates:
   US_BASE: { source: fred, id: "FEDFUNDS", name: "미국 기준금리(EFFR)" }
@@ -36,7 +38,7 @@ commodities:
   COFFEE_FUT: { source: yfinance, ticker: "KC=F", name: "미국 커피 선물" }
   # 현물 (FRED / yfinance)
   WTI_SPOT: { source: fred, id: "DCOILWTICO", name: "WTI유 현물" }
-  BRENT_SPOT: { source: yfinance, ticker: "BNO", name: "브렌트유 현물(ETF 대용)" }
+  BRENT_SPOT: { source: fred, id: "DCOILBRENTEU", name: "브렌트유 현물" }
   NATGAS_SPOT: { source: fred, id: "DHHNGSP", name: "천연가스 현물" }
 
 indices:

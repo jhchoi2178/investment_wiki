@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 from collectors.ecos_collector import collect_ecos_category
 from collectors.fred_collector import collect_fred_category
+from collectors.mof_collector import collect_mof_category
 from collectors.yf_collector import collect_yf_category
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -36,6 +37,7 @@ def run_collection(start_date: str, end_date: str | None, out_dir: Path) -> None
             collect_yf_category(items, category, start_date, end_date),
             collect_fred_category(items, category, start_date, end_date),
             collect_ecos_category(items, category, start_date, end_date),
+            collect_mof_category(items, category, start_date, end_date),
         ]
         valid = [df for df in frames if not df.empty]
         if not valid:
