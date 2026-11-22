@@ -18,7 +18,7 @@ def get_drive_service():
     if not creds_json:
         raise ValueError("GDRIVE_CREDENTIALS 환경변수가 설정되지 않았습니다.")
     info = json.loads(creds_json)
-    creds = Credentials.from_authorized_user_info(info, scopes=SCOPES)
+    creds = Credentials.from_authorized_user_info(info)
     return build("drive", "v3", credentials=creds)
 
 
