@@ -27,18 +27,13 @@ jobs:
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
         run: python src/main.py --start 2020-01-01
 
-      - name: Build HTML dashboard
-        run: python src/visualizers/build_dashboard.py --data-dir data --output data/dashboard.html
-
       - name: Upload to Google Drive (data/weekly)
         env:
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
         run: python src/utils/gdrive_uploader.py
 
-      - name: Upload collected CSVs and dashboard
+      - name: Upload collected CSVs
         uses: actions/upload-artifact@v4
         with:
           name: weekly-investment-data
-          path: |
-            data/*.csv
-            data/dashboard.html
+          path: data/*.csv
