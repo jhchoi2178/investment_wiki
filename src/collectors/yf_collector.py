@@ -32,7 +32,15 @@ def fetch_weekly_ohlc(
     cols = [c for c in ["Date", "Open", "High", "Low", "Close", "Volume"] if c in df.columns]
     df = df[cols].copy()
     df["Date"] = pd.to_datetime(df["Date"]).dt.strftime("%Y-%m-%d")
-    return df.dropna(subset=["Close"])
+    df = df.dropna(subset=["Close"])
+
+    # yfinance 1wk 원천 데이터의 집계 시점 불일치로 인한 OHLC 역전 보정
+    ohlc_cols = [c for c in ["Open", "High", "Low", "Close"] if c in df.columns]
+    if len(ohlc_cols) == 4:
+        df["High"] = df[ohlc_cols].max(axis=1)
+        df["Low"] = df[ohlc_cols].min(axis=1)
+
+    return df
 
 
 def collect_yf_category(

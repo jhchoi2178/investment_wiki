@@ -21,7 +21,7 @@ rates:
 fx:
   USD_KRW: { source: yfinance, ticker: "KRW=X", name: "원/달러 환율" }
   JPY_KRW: { source: yfinance, ticker: "JPYKRW=X", name: "원/엔 환율" }
-  CNY_KRW: { source: yfinance, ticker: "CNYKRW=X", name: "원/위안 환율" }
+  CNY_KRW: { source: ecos, stat_code: "731Y001", item_code: "0000053", name: "원/위안 환율" }
   DXY: { source: yfinance, ticker: "DX-Y.NYB", name: "달러 인덱스" }
 
 commodities:
