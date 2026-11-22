@@ -27,6 +27,11 @@ jobs:
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
         run: python src/main.py --start 2020-01-01
 
+      - name: Upload to Google Drive (data/weekly)
+        env:
+          GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
+        run: python src/utils/gdrive_uploader.py
+
       - name: Upload collected CSVs
         uses: actions/upload-artifact@v4
         with:
