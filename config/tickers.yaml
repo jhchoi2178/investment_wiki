@@ -1,0 +1,76 @@
+# 투자 지표 수집 대상 설정 파일 (6개 카테고리)
+# source: yfinance | fred | ecos
+
+bonds:
+  # 미국채 (FRED)
+  US_2Y: { source: fred, id: "DGS2", name: "미국채 2년물" }
+  US_10Y: { source: fred, id: "DGS10", name: "미국채 10년물" }
+  US_30Y: { source: fred, id: "DGS30", name: "미국채 30년물" }
+  # 한국채 (ECOS: 817Y002 - 시장금리 일별)
+  KR_2Y: { source: ecos, stat_code: "817Y002", item_code: "010195000", name: "한국 국고채 2년물" }
+  KR_10Y: { source: ecos, stat_code: "817Y002", item_code: "010210000", name: "한국 국고채 10년물" }
+  KR_30Y: { source: ecos, stat_code: "817Y002", item_code: "010230000", name: "한국 국고채 30년물" }
+  # 일본채 (FRED - 10년물 월간/일간, 2Y/30Y는 추후 보완 가능)
+  JP_10Y: { source: fred, id: "IRLTLT01JPM156N", name: "일본채 10년물" }
+
+rates:
+  US_BASE: { source: fred, id: "FEDFUNDS", name: "미국 기준금리(EFFR)" }
+  KR_BASE: { source: ecos, stat_code: "722Y001", item_code: "0101000", name: "한국 기준금리" }
+  JP_BASE: { source: fred, id: "IRSTCI01JPM156N", name: "일본 기준금리" }
+
+fx:
+  USD_KRW: { source: yfinance, ticker: "KRW=X", name: "원/달러 환율" }
+  JPY_KRW: { source: yfinance, ticker: "JPYKRW=X", name: "원/엔 환율" }
+  CNY_KRW: { source: yfinance, ticker: "CNYKRW=X", name: "원/위안 환율" }
+  DXY: { source: yfinance, ticker: "DX-Y.NYB", name: "달러 인덱스" }
+
+commodities:
+  # 선물 (yfinance)
+  GOLD_FUT: { source: yfinance, ticker: "GC=F", name: "금 선물" }
+  SILVER_FUT: { source: yfinance, ticker: "SI=F", name: "은 선물" }
+  COPPER_FUT: { source: yfinance, ticker: "HG=F", name: "구리 선물" }
+  WTI_FUT: { source: yfinance, ticker: "CL=F", name: "WTI유 선물" }
+  BRENT_FUT: { source: yfinance, ticker: "BZ=F", name: "브렌트유 선물" }
+  NATGAS_FUT: { source: yfinance, ticker: "NG=F", name: "천연가스 선물" }
+  CORN_FUT: { source: yfinance, ticker: "ZC=F", name: "미국 옥수수 선물" }
+  COFFEE_FUT: { source: yfinance, ticker: "KC=F", name: "미국 커피 선물" }
+  # 현물 (FRED / yfinance)
+  WTI_SPOT: { source: fred, id: "DCOILWTICO", name: "WTI유 현물" }
+  BRENT_SPOT: { source: yfinance, ticker: "BNO", name: "브렌트유 현물(ETF 대용)" }
+  NATGAS_SPOT: { source: fred, id: "DHHNGSP", name: "천연가스 현물" }
+
+indices:
+  # 현물 지수
+  KOSPI: { source: yfinance, ticker: "^KS11", name: "KOSPI" }
+  KOSDAQ: { source: yfinance, ticker: "^KQ11", name: "KOSDAQ" }
+  DOW: { source: yfinance, ticker: "^DJI", name: "다우존스" }
+  SP500: { source: yfinance, ticker: "^GSPC", name: "S&P 500" }
+  NASDAQ: { source: yfinance, ticker: "^IXIC", name: "나스닥 종합" }
+  NASDAQ100: { source: yfinance, ticker: "^NDX", name: "나스닥 100" }
+  RUSSELL2000: { source: yfinance, ticker: "^RUT", name: "러셀 2000" }
+  VIX: { source: yfinance, ticker: "^VIX", name: "VIX" }
+  NIKKEI225: { source: yfinance, ticker: "^N225", name: "닛케이 225" }
+  SHANGHAI: { source: yfinance, ticker: "000001.SS", name: "상해종합지수" }
+  HSI: { source: yfinance, ticker: "^HSI", name: "항셍지수" }
+  HSTECH: { source: yfinance, ticker: "3033.HK", name: "항셍테크(ETF 대용)" }
+  # 주요 지수 선물
+  SP500_FUT: { source: yfinance, ticker: "ES=F", name: "S&P 500 선물" }
+  NASDAQ100_FUT: { source: yfinance, ticker: "NQ=F", name: "나스닥 100 선물" }
+  DOW_FUT: { source: yfinance, ticker: "YM=F", name: "다우존스 선물" }
+  RUSSELL2000_FUT: { source: yfinance, ticker: "RTY=F", name: "러셀 2000 선물" }
+  NIKKEI_FUT: { source: yfinance, ticker: "NKD=F", name: "닛케이 선물" }
+
+stocks:
+  # 미국 빅테크
+  AAPL: { source: yfinance, ticker: "AAPL", name: "Apple" }
+  MSFT: { source: yfinance, ticker: "MSFT", name: "Microsoft" }
+  NVDA: { source: yfinance, ticker: "NVDA", name: "NVIDIA" }
+  GOOGL: { source: yfinance, ticker: "GOOGL", name: "Alphabet" }
+  AMZN: { source: yfinance, ticker: "AMZN", name: "Amazon" }
+  META: { source: yfinance, ticker: "META", name: "Meta" }
+  TSLA: { source: yfinance, ticker: "TSLA", name: "Tesla" }
+  # 한국 반도체
+  SAMSUNG: { source: yfinance, ticker: "005930.KS", name: "삼성전자" }
+  SKHYNIX: { source: yfinance, ticker: "000660.KS", name: "SK하이닉스" }
+  # 일본
+  SOFTBANK: { source: yfinance, ticker: "9984.T", name: "소프트뱅크 그룹" }
