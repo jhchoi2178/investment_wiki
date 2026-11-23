@@ -17,7 +17,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
     header { padding: 16px 24px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+    .brand { display: flex; align-items: center; gap: 16px; }
     h1 { margin: 0; font-size: 1.2rem; color: #f8fafc; }
+    nav { display: flex; gap: 8px; }
+    nav a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; }
+    nav a:hover { color: #f8fafc; background: #334155; }
+    nav a.active { color: #f8fafc; background: #0f172a; border-color: #475569; }
     .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
     select, label { font-size: 0.9rem; }
     select { background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 6px 10px; }
@@ -26,7 +31,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
   <header>
-    <h1>Investment Wiki · Weekly OHLC</h1>
+    <div class="brand">
+      <h1>Investment Wiki · Weekly OHLC</h1>
+      <nav>
+        <a href="index.html" class="active">Weekly OHLC</a>
+        <a href="spread.html">Spread Analysis</a>
+      </nav>
+    </div>
     <div class="controls">
       <label>카테고리: <select id="catSelect"></select></label>
       <label>지표: <select id="symSelect"></select></label>

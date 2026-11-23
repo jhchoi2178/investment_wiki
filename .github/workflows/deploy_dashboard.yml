@@ -39,7 +39,9 @@ jobs:
           gh run download "$RUN_ID" -n weekly-investment-data -D data
 
       - name: Build HTML dashboard
-        run: python src/visualizers/build_dashboard.py --data-dir data --output _site/index.html
+        run: |
+          python src/visualizers/build_dashboard.py --data-dir data --output _site/index.html
+          python src/visualizers/build_spread_page.py --data-dir data --output _site/spread.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
