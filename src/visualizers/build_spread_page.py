@@ -111,9 +111,14 @@ def compute_spreads(data_dir: Path) -> dict:
             continue
         a = df[df["Symbol"] == sym_a][["Date", "Close"]].rename(columns={"Close": "A"})
         b = df[df["Symbol"] == sym_b][["Date", "Close"]].rename(columns={"Close": "B"})
-        merged = pd.merge(a, b, on="Date", how="inner").sort_values("Date")
+        if a.empty or b.empty:
+            continue
+        a["Week"] = pd.to_datetime(a["Date"]).dt.to_period("W-FRI")
+        b["Week"] = pd.to_datetime(b["Date"]).dt.to_period("W-FRI")
+        merged = pd.merge(a[["Week", "A"]], b[["Week", "B"]], on="Week", how="inner").sort_values("Week")
         if merged.empty:
             continue
+        merged["Date"] = merged["Week"].dt.end_time.dt.strftime("%Y-%m-%d")
         merged["Spread"] = (merged["A"] - merged["B"]).round(4)
         result[key] = {
             "title": title,
