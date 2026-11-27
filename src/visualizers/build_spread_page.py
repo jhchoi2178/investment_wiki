@@ -50,6 +50,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <nav>
         <a href="index.html">Daily OHLC</a>
         <a href="spread.html" class="active">Spread Analysis</a>
+        <a href="regime.html">Regime Analysis</a>
       </nav>
     </div>
     <div class="controls">

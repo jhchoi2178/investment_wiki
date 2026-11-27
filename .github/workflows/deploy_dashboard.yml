@@ -42,6 +42,7 @@ jobs:
         run: |
           python src/visualizers/build_dashboard.py --data-dir data --output _site/index.html
           python src/visualizers/build_spread_page.py --data-dir data --output _site/spread.html
+          python src/visualizers/build_regime_page.py --data-dir data --output _site/regime.html
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
