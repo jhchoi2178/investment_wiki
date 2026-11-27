@@ -1,5 +1,5 @@
 """
-주간(Weekly) OHLC CSV 데이터를 읽어 Plotly.js 기반 인터랙티브 캔들 대시보드 HTML을 생성한다.
+일간(Daily) OHLC CSV 데이터를 읽어 TradingView Lightweight Charts 기반 인터랙티브 캔들 대시보드 HTML을 생성한다.
 """
 
 import argparse
@@ -13,20 +13,25 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Investment Wiki - Daily OHLC Dashboard</title>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
-    header { padding: 16px 24px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+    header { padding: 12px 24px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
     .brand { display: flex; align-items: center; gap: 16px; }
-    h1 { margin: 0; font-size: 1.2rem; color: #f8fafc; }
+    h1 { margin: 0; font-size: 1.15rem; color: #f8fafc; }
     nav { display: flex; gap: 8px; }
     nav a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; }
     nav a:hover { color: #f8fafc; background: #334155; }
     nav a.active { color: #f8fafc; background: #0f172a; border-color: #475569; }
-    .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
-    select, label { font-size: 0.9rem; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    select, label, button { font-size: 0.85rem; }
     select { background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 6px 10px; }
-    #chart { width: 100%; height: calc(100vh - 80px); min-height: 520px; }
+    .range-btns { display: flex; gap: 4px; }
+    .range-btns button { background: #0f172a; color: #94a3b8; border: 1px solid #475569; border-radius: 5px; padding: 4px 9px; cursor: pointer; }
+    .range-btns button:hover, .range-btns button.active { background: #334155; color: #f8fafc; border-color: #64748b; }
+    .chart-wrap { position: relative; width: 100%; height: calc(100vh - 68px); min-height: 520px; }
+    #chart { width: 100%; height: 100%; }
+    #legend { position: absolute; top: 12px; left: 16px; z-index: 10; background: rgba(15, 23, 42, 0.82); padding: 6px 12px; border-radius: 6px; border: 1px solid #334155; font-size: 0.85rem; pointer-events: none; font-variant-numeric: tabular-nums; }
   </style>
 </head>
 <body>
@@ -42,14 +47,43 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <label>카테고리: <select id="catSelect"></select></label>
       <label>지표: <select id="symSelect"></select></label>
       <label><input type="checkbox" id="maCheck" checked /> 20일 이동평균</label>
+      <div class="range-btns">
+        <button data-days="30">1M</button>
+        <button data-days="90">3M</button>
+        <button data-days="180">6M</button>
+        <button data-days="365">1Y</button>
+        <button data-days="0" class="active">ALL</button>
+      </div>
     </div>
   </header>
-  <div id="chart"></div>
+  <div class="chart-wrap">
+    <div id="legend"></div>
+    <div id="chart"></div>
+  </div>
   <script>
     const DATA = __DATA_JSON__;
     const catSelect = document.getElementById("catSelect");
     const symSelect = document.getElementById("symSelect");
     const maCheck = document.getElementById("maCheck");
+    const legend = document.getElementById("legend");
+    const chartEl = document.getElementById("chart");
+
+    const chart = LightweightCharts.createChart(chartEl, {
+      layout: { background: { color: "#0f172a" }, textColor: "#cbd5e1" },
+      grid: { vertLines: { color: "#1e293b" }, horzLines: { color: "#1e293b" } },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+      rightPriceScale: { borderColor: "#334155" },
+      timeScale: { borderColor: "#334155", timeVisible: true },
+    });
+
+    const candleSeries = chart.addCandlestickSeries({
+      upColor: "#22c55e", downColor: "#ef4444",
+      borderUpColor: "#22c55e", borderDownColor: "#ef4444",
+      wickUpColor: "#22c55e", wickDownColor: "#ef4444",
+    });
+    const maSeries = chart.addLineSeries({ color: "#38bdf8", lineWidth: 1.5, priceLineVisible: false });
+
+    new ResizeObserver(() => chart.applyOptions({ width: chartEl.clientWidth, height: chartEl.clientHeight })).observe(chartEl);
 
     Object.keys(DATA).forEach(cat => {
       const opt = document.createElement("option");
@@ -68,32 +102,50 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       renderChart();
     }
 
-    function calcSMA(arr, n) {
-      return arr.map((_, i) => i < n - 1 ? null : arr.slice(i - n + 1, i + 1).reduce((a, b) => a + b, 0) / n);
+    function updateLegend(bar, maVal) {
+      if (!bar) return;
+      const sym = symSelect.value;
+      const maTxt = maVal != null ? ` | 20D SMA: <span style="color:#38bdf8">${maVal.toFixed(4)}</span>` : "";
+      legend.innerHTML = `<b>${sym}</b> · ${bar.time} | O: ${bar.open} H: ${bar.high} L: ${bar.low} C: <b>${bar.close}</b>${maTxt}`;
     }
 
     function renderChart() {
       const info = DATA[catSelect.value][symSelect.value];
-      const traces = [{
-        x: info.date, open: info.open, high: info.high, low: info.low, close: info.close,
-        type: "candlestick", name: symSelect.value,
-        increasing: { line: { color: "#22c55e" } }, decreasing: { line: { color: "#ef4444" } }
-      }];
-      if (maCheck.checked) {
-        traces.push({
-          x: info.date, y: calcSMA(info.close, 20),
-          type: "scatter", mode: "lines", name: "20W SMA",
-          line: { color: "#38bdf8", width: 1.5 }
-        });
+      const candles = info.date.map((d, i) => ({
+        time: d, open: info.open[i], high: info.high[i], low: info.low[i], close: info.close[i]
+      }));
+      candleSeries.setData(candles);
+
+      const maData = [];
+      for (let i = 19; i < candles.length; i++) {
+        const sum = candles.slice(i - 19, i + 1).reduce((a, b) => a + b.close, 0);
+        maData.push({ time: candles[i].time, value: +(sum / 20).toFixed(4) });
       }
-      Plotly.newPlot("chart", traces, {
-        template: "plotly_dark",
-        paper_bgcolor: "#0f172a", plot_bgcolor: "#0f172a",
-        title: `${symSelect.value} · ${info.name}`,
-        xaxis: { rangeslider: { visible: false } },
-        margin: { t: 48, r: 24, b: 40, l: 56 }
-      }, { responsive: true });
+      maSeries.setData(maCheck.checked ? maData : []);
+      chart.timeScale().fitContent();
+      updateLegend(candles[candles.length - 1], maData.length ? maData[maData.length - 1].value : null);
     }
+
+    chart.subscribeCrosshairMove(param => {
+      if (!param.time || !param.seriesData) return;
+      const bar = param.seriesData.get(candleSeries);
+      const ma = param.seriesData.get(maSeries);
+      if (bar) updateLegend(bar, ma ? ma.value : null);
+    });
+
+    document.querySelectorAll(".range-btns button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".range-btns button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const days = parseInt(btn.dataset.days, 10);
+        if (days === 0) { chart.timeScale().fitContent(); return; }
+        const info = DATA[catSelect.value][symSelect.value];
+        const last = info.date[info.date.length - 1];
+        const fromDate = new Date(last);
+        fromDate.setDate(fromDate.getDate() - days);
+        chart.timeScale().setVisibleRange({ from: fromDate.toISOString().slice(0, 10), to: last });
+      });
+    });
 
     catSelect.addEventListener("change", updateSymbols);
     symSelect.addEventListener("change", renderChart);
