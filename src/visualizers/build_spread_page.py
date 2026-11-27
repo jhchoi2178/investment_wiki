@@ -22,18 +22,25 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Investment Wiki - Spread Analysis</title>
-  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
-    header { padding: 16px 24px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
+    header { padding: 12px 24px; background: #1e293b; border-bottom: 1px solid #334155; display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between; }
     .brand { display: flex; align-items: center; gap: 16px; }
-    h1 { margin: 0; font-size: 1.2rem; color: #f8fafc; }
+    h1 { margin: 0; font-size: 1.15rem; color: #f8fafc; }
     nav { display: flex; gap: 8px; }
     nav a { color: #94a3b8; text-decoration: none; font-size: 0.9rem; padding: 6px 12px; border-radius: 6px; border: 1px solid transparent; }
     nav a:hover { color: #f8fafc; background: #334155; }
     nav a.active { color: #f8fafc; background: #0f172a; border-color: #475569; }
-    select { background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 6px 10px; font-size: 0.9rem; }
-    #chart { width: 100%; height: calc(100vh - 80px); min-height: 520px; }
+    .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    select, label, button { font-size: 0.85rem; }
+    select { background: #0f172a; color: #f8fafc; border: 1px solid #475569; border-radius: 6px; padding: 6px 10px; }
+    .range-btns { display: flex; gap: 4px; }
+    .range-btns button { background: #0f172a; color: #94a3b8; border: 1px solid #475569; border-radius: 5px; padding: 4px 9px; cursor: pointer; }
+    .range-btns button:hover, .range-btns button.active { background: #334155; color: #f8fafc; border-color: #64748b; }
+    .chart-wrap { position: relative; width: 100%; height: calc(100vh - 68px); min-height: 520px; }
+    #chart { width: 100%; height: 100%; }
+    #tooltip { position: absolute; display: none; z-index: 20; background: rgba(15, 23, 42, 0.92); padding: 8px 10px; border-radius: 6px; border: 1px solid #475569; font-size: 0.8rem; pointer-events: none; font-variant-numeric: tabular-nums; line-height: 1.45; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
   </style>
 </head>
 <body>
@@ -41,18 +48,47 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="brand">
       <h1>Investment Wiki · Spreads</h1>
       <nav>
-        <a href="index.html">Weekly OHLC</a>
+        <a href="index.html">Daily OHLC</a>
         <a href="spread.html" class="active">Spread Analysis</a>
       </nav>
     </div>
     <div class="controls">
       <label>지표: <select id="spreadSelect"></select></label>
+      <div class="range-btns">
+        <button data-days="30">1M</button>
+        <button data-days="90">3M</button>
+        <button data-days="180">6M</button>
+        <button data-days="365">1Y</button>
+        <button data-days="0" class="active">ALL</button>
+      </div>
     </div>
   </header>
-  <div id="chart"></div>
+  <div class="chart-wrap">
+    <div id="tooltip"></div>
+    <div id="chart"></div>
+  </div>
   <script>
     const DATA = __DATA_JSON__;
     const spreadSelect = document.getElementById("spreadSelect");
+    const tooltip = document.getElementById("tooltip");
+    const chartEl = document.getElementById("chart");
+    let activeDays = 0;
+
+    const chart = LightweightCharts.createChart(chartEl, {
+      layout: { background: { color: "#0f172a" }, textColor: "#cbd5e1" },
+      grid: { vertLines: { color: "#1e293b" }, horzLines: { color: "#1e293b" } },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+      rightPriceScale: { borderColor: "#334155" },
+      timeScale: { borderColor: "#334155", timeVisible: true },
+    });
+
+    const areaSeries = chart.addAreaSeries({
+      lineColor: "#38bdf8", topColor: "rgba(56, 189, 248, 0.28)", bottomColor: "rgba(56, 189, 248, 0.02)",
+      lineWidth: 2, lastValueVisible: true, priceLineVisible: true,
+    });
+    areaSeries.createPriceLine({ price: 0, color: "#f87171", lineWidth: 1.5, lineStyle: 2, axisLabelVisible: true });
+
+    new ResizeObserver(() => chart.applyOptions({ width: chartEl.clientWidth, height: chartEl.clientHeight })).observe(chartEl);
 
     Object.entries(DATA).forEach(([key, info]) => {
       const opt = document.createElement("option");
@@ -61,32 +97,47 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       spreadSelect.appendChild(opt);
     });
 
+    function applyRange() {
+      if (activeDays === 0) { chart.timeScale().fitContent(); return; }
+      const info = DATA[spreadSelect.value];
+      if (!info || !info.date.length) return;
+      const last = info.date[info.date.length - 1];
+      const fromDate = new Date(last);
+      fromDate.setDate(fromDate.getDate() - activeDays);
+      chart.timeScale().setVisibleRange({ from: fromDate.toISOString().slice(0, 10), to: last });
+    }
+
     function renderChart() {
       const info = DATA[spreadSelect.value];
       if (!info) return;
-      const trace = {
-        x: info.date,
-        y: info.spread,
-        type: "scatter",
-        mode: "lines",
-        name: info.title,
-        line: { color: "#38bdf8", width: 2 },
-        fill: "tozeroy",
-        fillcolor: "rgba(56, 189, 248, 0.15)"
-      };
-      const layout = {
-        template: "plotly_dark",
-        paper_bgcolor: "#0f172a",
-        plot_bgcolor: "#0f172a",
-        title: info.title,
-        shapes: [{
-          type: "line", xref: "paper", x0: 0, x1: 1, y0: 0, y1: 0,
-          line: { color: "#f87171", width: 1.5, dash: "dash" }
-        }],
-        margin: { t: 48, r: 24, b: 40, l: 56 }
-      };
-      Plotly.newPlot("chart", [trace], layout, { responsive: true });
+      const points = info.date.map((d, i) => ({ time: d, value: info.spread[i] }));
+      areaSeries.setData(points);
+      applyRange();
     }
+
+    chart.subscribeCrosshairMove(param => {
+      if (!param.point || !param.time || param.point.x < 0 || param.point.y < 0) {
+        tooltip.style.display = "none";
+        return;
+      }
+      const pt = param.seriesData.get(areaSeries);
+      if (!pt) { tooltip.style.display = "none"; return; }
+      tooltip.innerHTML = `<b>${pt.time}</b><br/>Spread: <b style="color:#38bdf8">${pt.value.toFixed(4)}</b>`;
+      tooltip.style.display = "block";
+      const left = Math.min(param.point.x + 14, chartEl.clientWidth - tooltip.offsetWidth - 12);
+      const top = Math.min(param.point.y + 14, chartEl.clientHeight - tooltip.offsetHeight - 12);
+      tooltip.style.left = Math.max(8, left) + "px";
+      tooltip.style.top = Math.max(8, top) + "px";
+    });
+
+    document.querySelectorAll(".range-btns button").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".range-btns button").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        activeDays = parseInt(btn.dataset.days, 10);
+        applyRange();
+      });
+    });
 
     spreadSelect.addEventListener("change", renderChart);
     renderChart();
@@ -113,12 +164,9 @@ def compute_spreads(data_dir: Path) -> dict:
         b = df[df["Symbol"] == sym_b][["Date", "Close"]].rename(columns={"Close": "B"})
         if a.empty or b.empty:
             continue
-        a["Week"] = pd.to_datetime(a["Date"]).dt.to_period("W-FRI")
-        b["Week"] = pd.to_datetime(b["Date"]).dt.to_period("W-FRI")
-        merged = pd.merge(a[["Week", "A"]], b[["Week", "B"]], on="Week", how="inner").sort_values("Week")
+        merged = pd.merge(a, b, on="Date", how="inner").sort_values("Date")
         if merged.empty:
             continue
-        merged["Date"] = merged["Week"].dt.end_time.dt.strftime("%Y-%m-%d")
         merged["Spread"] = (merged["A"] - merged["B"]).round(4)
         result[key] = {
             "title": title,

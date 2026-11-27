@@ -31,7 +31,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .range-btns button:hover, .range-btns button.active { background: #334155; color: #f8fafc; border-color: #64748b; }
     .chart-wrap { position: relative; width: 100%; height: calc(100vh - 68px); min-height: 520px; }
     #chart { width: 100%; height: 100%; }
-    #legend { position: absolute; top: 12px; left: 16px; z-index: 10; background: rgba(15, 23, 42, 0.82); padding: 6px 12px; border-radius: 6px; border: 1px solid #334155; font-size: 0.85rem; pointer-events: none; font-variant-numeric: tabular-nums; }
+    #tooltip { position: absolute; display: none; z-index: 20; background: rgba(15, 23, 42, 0.92); padding: 8px 10px; border-radius: 6px; border: 1px solid #475569; font-size: 0.8rem; pointer-events: none; font-variant-numeric: tabular-nums; line-height: 1.45; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
   </style>
 </head>
 <body>
@@ -57,7 +57,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
   </header>
   <div class="chart-wrap">
-    <div id="legend"></div>
+    <div id="tooltip"></div>
     <div id="chart"></div>
   </div>
   <script>
@@ -65,8 +65,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     const catSelect = document.getElementById("catSelect");
     const symSelect = document.getElementById("symSelect");
     const maCheck = document.getElementById("maCheck");
-    const legend = document.getElementById("legend");
+    const tooltip = document.getElementById("tooltip");
     const chartEl = document.getElementById("chart");
+    let activeDays = 0;
 
     const chart = LightweightCharts.createChart(chartEl, {
       layout: { background: { color: "#0f172a" }, textColor: "#cbd5e1" },
@@ -81,7 +82,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       borderUpColor: "#22c55e", borderDownColor: "#ef4444",
       wickUpColor: "#22c55e", wickDownColor: "#ef4444",
     });
-    const maSeries = chart.addLineSeries({ color: "#38bdf8", lineWidth: 1.5, priceLineVisible: false });
+    const maSeries = chart.addLineSeries({
+      color: "#38bdf8", lineWidth: 1.5,
+      lastValueVisible: true, priceLineVisible: true,
+    });
 
     new ResizeObserver(() => chart.applyOptions({ width: chartEl.clientWidth, height: chartEl.clientHeight })).observe(chartEl);
 
@@ -102,11 +106,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       renderChart();
     }
 
-    function updateLegend(bar, maVal) {
-      if (!bar) return;
-      const sym = symSelect.value;
-      const maTxt = maVal != null ? ` | 20D SMA: <span style="color:#38bdf8">${maVal.toFixed(4)}</span>` : "";
-      legend.innerHTML = `<b>${sym}</b> · ${bar.time} | O: ${bar.open} H: ${bar.high} L: ${bar.low} C: <b>${bar.close}</b>${maTxt}`;
+    function applyRange() {
+      if (activeDays === 0) { chart.timeScale().fitContent(); return; }
+      const info = DATA[catSelect.value][symSelect.value];
+      if (!info || !info.date.length) return;
+      const last = info.date[info.date.length - 1];
+      const fromDate = new Date(last);
+      fromDate.setDate(fromDate.getDate() - activeDays);
+      chart.timeScale().setVisibleRange({ from: fromDate.toISOString().slice(0, 10), to: last });
     }
 
     function renderChart() {
@@ -122,28 +129,32 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         maData.push({ time: candles[i].time, value: +(sum / 20).toFixed(4) });
       }
       maSeries.setData(maCheck.checked ? maData : []);
-      chart.timeScale().fitContent();
-      updateLegend(candles[candles.length - 1], maData.length ? maData[maData.length - 1].value : null);
+      applyRange();
     }
 
     chart.subscribeCrosshairMove(param => {
-      if (!param.time || !param.seriesData) return;
+      if (!param.point || !param.time || param.point.x < 0 || param.point.y < 0) {
+        tooltip.style.display = "none";
+        return;
+      }
       const bar = param.seriesData.get(candleSeries);
+      if (!bar) { tooltip.style.display = "none"; return; }
       const ma = param.seriesData.get(maSeries);
-      if (bar) updateLegend(bar, ma ? ma.value : null);
+      const maTxt = ma != null ? `<br/><span style="color:#38bdf8">20D SMA: ${ma.value.toFixed(4)}</span>` : "";
+      tooltip.innerHTML = `<b>${bar.time}</b><br/>O: ${bar.open} &nbsp; H: ${bar.high}<br/>L: ${bar.low} &nbsp; C: <b>${bar.close}</b>${maTxt}`;
+      tooltip.style.display = "block";
+      const left = Math.min(param.point.x + 14, chartEl.clientWidth - tooltip.offsetWidth - 12);
+      const top = Math.min(param.point.y + 14, chartEl.clientHeight - tooltip.offsetHeight - 12);
+      tooltip.style.left = Math.max(8, left) + "px";
+      tooltip.style.top = Math.max(8, top) + "px";
     });
 
     document.querySelectorAll(".range-btns button").forEach(btn => {
       btn.addEventListener("click", () => {
         document.querySelectorAll(".range-btns button").forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
-        const days = parseInt(btn.dataset.days, 10);
-        if (days === 0) { chart.timeScale().fitContent(); return; }
-        const info = DATA[catSelect.value][symSelect.value];
-        const last = info.date[info.date.length - 1];
-        const fromDate = new Date(last);
-        fromDate.setDate(fromDate.getDate() - days);
-        chart.timeScale().setVisibleRange({ from: fromDate.toISOString().slice(0, 10), to: last });
+        activeDays = parseInt(btn.dataset.days, 10);
+        applyRange();
       });
     });
 
