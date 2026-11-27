@@ -21,11 +21,20 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Download previous data artifact (for incremental update)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RUN_ID=$(gh run list --workflow=collect_weekly.yml --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
+          if [ -n "$RUN_ID" ]; then
+            gh run download "$RUN_ID" -n daily-investment-data -D data || true
+          fi
+
       - name: Run daily data collector
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
-        run: python src/main.py --start 2020-01-01
+        run: python src/main.py --start 2000-01-01
 
       - name: Upload to Google Drive (data/daily)
         env:
