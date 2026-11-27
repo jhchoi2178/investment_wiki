@@ -1,9 +1,9 @@
-name: Collect Weekly Investment Data
+name: Collect Daily Investment Data
 
 on:
   schedule:
-    # 매주 토요일 오전 10:00 (KST) = UTC 01:00
-    - cron: "0 1 * * 6"
+    # 매일 오전 10:00 (KST) = UTC 01:00
+    - cron: "0 1 * * *"
   workflow_dispatch:
 
 jobs:
@@ -21,13 +21,13 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run weekly data collector
+      - name: Run daily data collector
         env:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}
         run: python src/main.py --start 2020-01-01
 
-      - name: Upload to Google Drive (data/weekly)
+      - name: Upload to Google Drive (data/daily)
         env:
           GDRIVE_CREDENTIALS: ${{ secrets.GDRIVE_CREDENTIALS }}
         run: python src/utils/gdrive_uploader.py
@@ -35,5 +35,5 @@ jobs:
       - name: Upload collected CSVs
         uses: actions/upload-artifact@v4
         with:
-          name: weekly-investment-data
+          name: daily-investment-data
           path: data/*.csv

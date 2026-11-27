@@ -42,7 +42,7 @@ def get_or_create_folder(service, name: str, parent_id: str) -> str:
     return folder["id"]
 
 
-def upload_csv_files(local_dir: Path, data_folder_id: str, subfolder: str = "weekly") -> None:
+def upload_csv_files(local_dir: Path, data_folder_id: str, subfolder: str = "daily") -> None:
     """local_dir 내 모든 CSV 파일을 Drive data/{subfolder} 폴더에 업로드(덮어쓰기)한다."""
     service = get_drive_service()
     target_folder_id = get_or_create_folder(service, subfolder, data_folder_id)

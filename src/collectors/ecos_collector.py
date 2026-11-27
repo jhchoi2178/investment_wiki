@@ -40,21 +40,17 @@ def fetch_ecos_weekly(
         return pd.DataFrame()
 
     df["date"] = pd.to_datetime(df["TIME"], format="%Y%m%d", errors="coerce")
-    df = df.dropna(subset=["date"]).set_index("date").sort_index()
+    df = df.dropna(subset=["date"]).sort_values("date")
 
-    # 주간(금요일 마감) OHLC 리샘플링
-    weekly = df["value"].resample("W-FRI").ohlc().dropna()
-    weekly = weekly.reset_index().rename(
-        columns={
-            "date": "Date",
-            "open": "Open",
-            "high": "High",
-            "low": "Low",
-            "close": "Close",
-        }
-    )
-    weekly["Date"] = weekly["Date"].dt.strftime("%Y-%m-%d")
-    return weekly
+    # 일간 OHLC 형식 변환 (단일 종가 기준 O=H=L=C)
+    daily = pd.DataFrame({
+        "Date": df["date"].dt.strftime("%Y-%m-%d"),
+        "Open": df["value"],
+        "High": df["value"],
+        "Low": df["value"],
+        "Close": df["value"],
+    })
+    return daily
 
 
 def collect_ecos_category(

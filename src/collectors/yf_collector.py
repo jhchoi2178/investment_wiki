@@ -1,5 +1,5 @@
 """
-yfinance 기반 주간(Weekly) OHLCV 데이터 수집기.
+yfinance 기반 일간(Daily) OHLCV 데이터 수집기.
 환율, 원자재 선물, 글로벌 지수 및 개별 종목 시세를 수집한다.
 """
 
@@ -7,17 +7,17 @@ import pandas as pd
 import yfinance as yf
 
 
-def fetch_weekly_ohlc(
+def fetch_daily_ohlc(
     ticker: str,
     start_date: str,
     end_date: str | None = None,
 ) -> pd.DataFrame:
-    """단일 티커의 주간 OHLCV 데이터를 조회하여 표준 DataFrame으로 반환한다."""
+    """단일 티커의 일간 OHLCV 데이터를 조회하여 표준 DataFrame으로 반환한다."""
     df = yf.download(
         ticker,
         start=start_date,
         end=end_date,
-        interval="1wk",
+        interval="1d",
         auto_adjust=True,
         progress=False,
     )
@@ -49,12 +49,12 @@ def collect_yf_category(
     start_date: str,
     end_date: str | None = None,
 ) -> pd.DataFrame:
-    """카테고리 내 yfinance 대상 모든 티커의 주간 데이터를 수집해 병합한다."""
+    """카테고리 내 yfinance 대상 모든 티커의 일간 데이터를 수집해 병합한다."""
     frames = []
     for symbol, meta in items.items():
         if meta.get("source") != "yfinance":
             continue
-        df = fetch_weekly_ohlc(meta["ticker"], start_date, end_date)
+        df = fetch_daily_ohlc(meta["ticker"], start_date, end_date)
         if df.empty:
             print(f"[WARN] No data for {symbol} ({meta['ticker']})")
             continue

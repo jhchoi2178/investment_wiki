@@ -58,13 +58,16 @@ def collect_mof_category(
         series = pd.to_numeric(raw[col], errors="coerce").dropna()
         if series.empty:
             continue
-        weekly = series.resample("W-FRI").ohlc().dropna()
-        weekly = weekly.reset_index()
-        weekly["Date"] = weekly["Date"].dt.strftime("%Y-%m-%d")
-        weekly.columns = ["Date", "Open", "High", "Low", "Close"]
-        weekly["Symbol"] = symbol
-        weekly["Name"] = meta.get("name", symbol)
-        weekly["Category"] = category
-        out_frames.append(weekly)
+        daily = pd.DataFrame({
+            "Date": series.index.strftime("%Y-%m-%d"),
+            "Open": series.values,
+            "High": series.values,
+            "Low": series.values,
+            "Close": series.values,
+        })
+        daily["Symbol"] = symbol
+        daily["Name"] = meta.get("name", symbol)
+        daily["Category"] = category
+        out_frames.append(daily)
 
     return pd.concat(out_frames, ignore_index=True) if out_frames else pd.DataFrame()

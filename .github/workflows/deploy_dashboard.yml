@@ -2,7 +2,7 @@ name: Deploy Dashboard to GitHub Pages
 
 on:
   workflow_run:
-    workflows: ["Collect Weekly Investment Data"]
+    workflows: ["Collect Daily Investment Data"]
     types: [completed]
   workflow_dispatch:
 
@@ -31,12 +31,12 @@ jobs:
       - name: Install pandas
         run: pip install pandas
 
-      - name: Download latest weekly data artifact
+      - name: Download latest daily data artifact
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           RUN_ID=$(gh run list --workflow=collect_weekly.yml --status=success --limit=1 --json databaseId --jq '.[0].databaseId')
-          gh run download "$RUN_ID" -n weekly-investment-data -D data
+          gh run download "$RUN_ID" -n daily-investment-data -D data
 
       - name: Build HTML dashboard
         run: |

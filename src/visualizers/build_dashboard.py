@@ -12,7 +12,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Investment Wiki - Weekly OHLC Dashboard</title>
+  <title>Investment Wiki - Daily OHLC Dashboard</title>
   <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }
@@ -32,16 +32,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <body>
   <header>
     <div class="brand">
-      <h1>Investment Wiki · Weekly OHLC</h1>
+      <h1>Investment Wiki · Daily OHLC</h1>
       <nav>
-        <a href="index.html" class="active">Weekly OHLC</a>
+        <a href="index.html" class="active">Daily OHLC</a>
         <a href="spread.html">Spread Analysis</a>
       </nav>
     </div>
     <div class="controls">
       <label>카테고리: <select id="catSelect"></select></label>
       <label>지표: <select id="symSelect"></select></label>
-      <label><input type="checkbox" id="maCheck" checked /> 20주 이동평균</label>
+      <label><input type="checkbox" id="maCheck" checked /> 20일 이동평균</label>
     </div>
   </header>
   <div id="chart"></div>
