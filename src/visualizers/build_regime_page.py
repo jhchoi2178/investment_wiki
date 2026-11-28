@@ -46,6 +46,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <a href="index.html">Daily OHLC</a>
         <a href="spread.html">Spread Analysis</a>
         <a href="regime.html" class="active">Regime Analysis</a>
+        <a href="correlation.html">Correlation</a>
       </nav>
     </div>
     <div class="controls">
