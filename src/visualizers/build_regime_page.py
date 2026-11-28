@@ -56,13 +56,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <main>
     <div class="summary" id="summary"></div>
     <table>
-      <thead>
-        <tr>
-          <th>심볼</th><th>자산명</th>
-          <th id="hA_ret">국면 A 연수익률</th><th id="hA_mdd">국면 A MDD</th>
-          <th id="hB_ret">국면 B 연수익률</th><th id="hB_mdd">국면 B MDD</th>
-        </tr>
-      </thead>
+      <thead id="thead"></thead>
       <tbody id="tbody"></tbody>
     </table>
   </main>
@@ -71,6 +65,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     const regimeSelect = document.getElementById("regimeSelect");
     const catSelect = document.getElementById("catSelect");
     const summaryEl = document.getElementById("summary");
+    const thead = document.getElementById("thead");
     const tbody = document.getElementById("tbody");
 
     Object.entries(DATA).forEach(([k, v]) => {
@@ -99,19 +94,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     function renderTable() {
       const reg = DATA[regimeSelect.value];
       const rows = reg.categories[catSelect.value] || [];
-      document.getElementById("hA_ret").textContent = `${reg.label_a} 연수익률`;
-      document.getElementById("hA_mdd").textContent = `${reg.label_a} MDD`;
-      document.getElementById("hB_ret").textContent = `${reg.label_b} 연수익률`;
-      document.getElementById("hB_mdd").textContent = `${reg.label_b} MDD`;
-      summaryEl.innerHTML = `
-        <div class="card"><div class="label">${reg.label_a}</div><div class="val">${reg.days_a}일</div></div>
-        <div class="card"><div class="label">${reg.label_b}</div><div class="val">${reg.days_b}일</div></div>
-      `;
+      summaryEl.innerHTML = reg.regimes.map(g =>
+        `<div class="card"><div class="label">${g.label}</div><div class="val">${g.days}일</div></div>`
+      ).join("");
+      thead.innerHTML = `<tr><th>심볼</th><th>자산명</th>${reg.regimes.map(g =>
+        `<th>${g.label}<br/>연수익률</th><th>${g.label}<br/>MDD</th>`
+      ).join("")}</tr>`;
       tbody.innerHTML = rows.map(r => `
         <tr>
           <td><b>${r.symbol}</b></td><td>${r.name}</td>
-          <td>${fmtPct(r.ret_a)}</td><td class="neg">${r.mdd_a != null ? r.mdd_a.toFixed(1) + "%" : "-"}</td>
-          <td>${fmtPct(r.ret_b)}</td><td class="neg">${r.mdd_b != null ? r.mdd_b.toFixed(1) + "%" : "-"}</td>
+          ${r.stats.map(s => `<td>${fmtPct(s.ret)}</td><td class="neg">${s.mdd != null ? s.mdd.toFixed(1) + "%" : "-"}</td>`).join("")}
         </tr>
       `).join("");
     }
@@ -125,18 +117,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 """
 
 
-def _calc_stats(returns: pd.Series) -> tuple[float | None, float | None]:
+def _calc_stats(returns: pd.Series) -> dict:
     """일간 수익률 시리즈에서 연환산 수익률(%)과 MDD(%)를 계산한다."""
     if len(returns) < 5:
-        return None, None
+        return {"ret": None, "mdd": None}
     ann_ret = float(returns.mean() * 252 * 100)
     cum = (1 + returns).cumprod()
     mdd = float(((cum / cum.cummax()) - 1).min() * 100)
-    return round(ann_ret, 2), round(mdd, 2)
+    return {"ret": round(ann_ret, 2), "mdd": round(mdd, 2)}
 
 
 def compute_regimes(data_dir: Path) -> dict:
-    """VIX 및 미 장단기 금리차 국면별 자산 성과를 계산한다."""
+    """VIX(4구간: 10/20/30) 및 미 장단기 금리차 국면별 자산 성과를 계산한다."""
     dfs = {p.stem: pd.read_csv(p) for p in sorted(data_dir.glob("*.csv"))}
     idx_df = dfs.get("indices", pd.DataFrame())
     bond_df = dfs.get("bonds", pd.DataFrame())
@@ -145,16 +137,27 @@ def compute_regimes(data_dir: Path) -> dict:
     if not idx_df.empty:
         vix = idx_df[idx_df["Symbol"] == "VIX"][["Date", "Close"]].set_index("Date")["Close"]
         if not vix.empty:
-            regime_defs["vix"] = ("VIX 공포/안정 국면 (기준: 20)", "안정 (VIX < 20)", "공포 (VIX ≥ 20)", vix < 20)
+            regime_defs["vix"] = (
+                "VIX 4구간 국면 (기준: 10 / 20 / 30)",
+                [
+                    ("초안정 (< 10)", vix < 10),
+                    ("안정 (10~20)", (vix >= 10) & (vix < 20)),
+                    ("경계 (20~30)", (vix >= 20) & (vix < 30)),
+                    ("공포 (≥ 30)", vix >= 30),
+                ],
+            )
     if not bond_df.empty:
         us10 = bond_df[bond_df["Symbol"] == "US_10Y"][["Date", "Close"]].set_index("Date")["Close"]
         us2 = bond_df[bond_df["Symbol"] == "US_2Y"][["Date", "Close"]].set_index("Date")["Close"]
         spread = (us10 - us2).dropna()
         if not spread.empty:
-            regime_defs["yc"] = ("미국 장단기 금리차 국면 (10Y-2Y)", "정상 (≥ 0)", "역전 (< 0)", spread >= 0)
+            regime_defs["yc"] = (
+                "미국 장단기 금리차 국면 (10Y-2Y)",
+                [("정상 (≥ 0)", spread >= 0), ("역전 (< 0)", spread < 0)],
+            )
 
     result = {}
-    for key, (title, label_a, label_b, mask) in regime_defs.items():
+    for key, (title, groups) in regime_defs.items():
         cats = {}
         for cat in ("indices", "commodities", "fx", "stocks"):
             df = dfs.get(cat)
@@ -164,21 +167,21 @@ def compute_regimes(data_dir: Path) -> dict:
             for sym, grp in df.groupby("Symbol"):
                 grp = grp.sort_values("Date").set_index("Date")
                 ret = grp["Close"].pct_change().dropna()
-                aligned = ret.index.intersection(mask.index)
-                if aligned.empty:
-                    continue
-                r_a, m_a = _calc_stats(ret.loc[aligned][mask.loc[aligned]])
-                r_b, m_b = _calc_stats(ret.loc[aligned][~mask.loc[aligned]])
+                stats = []
+                for _, mask in groups:
+                    aligned = ret.index.intersection(mask.index)
+                    stats.append(_calc_stats(ret.loc[aligned][mask.loc[aligned]]) if not aligned.empty else {"ret": None, "mdd": None})
                 rows.append({
                     "symbol": sym,
                     "name": str(grp["Name"].iloc[0]) if "Name" in grp.columns else sym,
-                    "ret_a": r_a, "mdd_a": m_a, "ret_b": r_b, "mdd_b": m_b,
+                    "stats": stats,
                 })
             if rows:
                 cats[cat] = rows
         result[key] = {
-            "title": title, "label_a": label_a, "label_b": label_b,
-            "days_a": int(mask.sum()), "days_b": int((~mask).sum()), "categories": cats,
+            "title": title,
+            "regimes": [{"label": lbl, "days": int(mask.sum())} for lbl, mask in groups],
+            "categories": cats,
         }
     return result
 
